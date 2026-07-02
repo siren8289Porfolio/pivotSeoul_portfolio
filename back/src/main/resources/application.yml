@@ -23,7 +23,16 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
-# Spring → FastAPI(lifePivot_) — domain/ai 게이트웨이가 ${pivotseoul.ai.fastapi-base-url}/api/v1/... 로 프록시
+# Spring → FastAPI — simulation AiGateway가 ${pivotseoul.ai.fastapi-base-url}/api/v1/... 로 프록시
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info
+  metrics:
+    tags:
+      application: pivotseoul-back
+
 pivotseoul:
   ai:
     fastapi-base-url: ${PIVOT_FASTAPI_BASE_URL:http://127.0.0.1:8000}

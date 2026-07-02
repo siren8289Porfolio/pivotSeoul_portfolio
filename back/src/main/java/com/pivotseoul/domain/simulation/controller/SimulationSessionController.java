@@ -3,7 +3,7 @@ package com.pivotseoul.domain.simulation.controller;
 import com.pivotseoul.domain.simulation.dto.CreateSessionRequest;
 import com.pivotseoul.domain.simulation.dto.CreateSessionResponse;
 import com.pivotseoul.domain.simulation.service.SimulationSessionService;
-import com.pivotseoul.global.response.ApiResponse;
+import com.pivotseoul.global.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

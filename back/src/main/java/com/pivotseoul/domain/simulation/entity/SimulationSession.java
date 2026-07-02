@@ -1,6 +1,6 @@
 package com.pivotseoul.domain.simulation.entity;
 
-import com.pivotseoul.domain.user.entity.LifeStage;
+import com.pivotseoul.domain.simulation.entity.LifeStage;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

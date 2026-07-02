@@ -58,9 +58,9 @@ export function StageSelection() {
   const { c, isDark } = useTheme();
   const [hoveredId, setHoveredId] = useState<LifeStage | null>(null);
 
-  const handleSelect = (stage: LifeStage, path: string) => {
+  const handleSelect = (stage: LifeStage) => {
     updateProfile({ lifeStage: stage });
-    navigate(path);
+    navigate('/onboarding');
   };
 
   return (
@@ -71,7 +71,7 @@ export function StageSelection() {
           <ChevronLeft size={16} />
         </button>
         <div>
-          <p style={{ color: c.textMuted, fontSize: '0.78rem' }}>STEP 1 / 5</p>
+          <p style={{ color: c.textMuted, fontSize: '0.78rem' }}>STEP 1 / 4</p>
           <h2 style={{ color: c.text, fontSize: '1.3rem', fontWeight: 700, letterSpacing: '-0.01em' }}>나의 생애 단계를 선택하세요</h2>
         </div>
       </div>
@@ -91,7 +91,7 @@ export function StageSelection() {
                 boxShadow: isHovered ? `0 0 32px ${stage.glow}` : c.cardShadow,
                 transform: isHovered ? 'translateY(-2px)' : 'none',
               }}
-              onClick={() => handleSelect(stage.id, stage.path)}
+              onClick={() => handleSelect(stage.id)}
               onMouseEnter={() => setHoveredId(stage.id)}
               onMouseLeave={() => setHoveredId(null)}
             >

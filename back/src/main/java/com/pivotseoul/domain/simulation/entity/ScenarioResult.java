@@ -39,27 +39,6 @@ public class ScenarioResult {
     @Column(name = "housing_score", precision = 14, scale = 6)
     private BigDecimal housingScore;
 
-    @Column(name = "disposable_income_score", precision = 14, scale = 6)
-    private BigDecimal disposableIncomeScore;
-
-    @Column(name = "career_score", precision = 14, scale = 6)
-    private BigDecimal careerScore;
-
-    @Column(name = "time_loss_score", precision = 14, scale = 6)
-    private BigDecimal timeLossScore;
-
-    @Column(name = "opportunity_index", precision = 14, scale = 6)
-    private BigDecimal opportunityIndex;
-
-    @Column(name = "childcare_score", precision = 14, scale = 6)
-    private BigDecimal childcareScore;
-
-    @Column(name = "policy_score", precision = 14, scale = 6)
-    private BigDecimal policyScore;
-
-    @Column(name = "senior_sustainability_score", precision = 14, scale = 6)
-    private BigDecimal seniorSustainabilityScore;
-
     public ScenarioResult() {
     }
 
@@ -125,61 +104,5 @@ public class ScenarioResult {
 
     public void setHousingScore(BigDecimal housingScore) {
         this.housingScore = housingScore;
-    }
-
-    public BigDecimal getDisposableIncomeScore() {
-        return disposableIncomeScore;
-    }
-
-    public void setDisposableIncomeScore(BigDecimal disposableIncomeScore) {
-        this.disposableIncomeScore = disposableIncomeScore;
-    }
-
-    public BigDecimal getCareerScore() {
-        return careerScore;
-    }
-
-    public void setCareerScore(BigDecimal careerScore) {
-        this.careerScore = careerScore;
-    }
-
-    public BigDecimal getTimeLossScore() {
-        return timeLossScore;
-    }
-
-    public void setTimeLossScore(BigDecimal timeLossScore) {
-        this.timeLossScore = timeLossScore;
-    }
-
-    public BigDecimal getOpportunityIndex() {
-        return opportunityIndex;
-    }
-
-    public void setOpportunityIndex(BigDecimal opportunityIndex) {
-        this.opportunityIndex = opportunityIndex;
-    }
-
-    public BigDecimal getChildcareScore() {
-        return childcareScore;
-    }
-
-    public void setChildcareScore(BigDecimal childcareScore) {
-        this.childcareScore = childcareScore;
-    }
-
-    public BigDecimal getPolicyScore() {
-        return policyScore;
-    }
-
-    public void setPolicyScore(BigDecimal policyScore) {
-        this.policyScore = policyScore;
-    }
-
-    public BigDecimal getSeniorSustainabilityScore() {
-        return seniorSustainabilityScore;
-    }
-
-    public void setSeniorSustainabilityScore(BigDecimal seniorSustainabilityScore) {
-        this.seniorSustainabilityScore = seniorSustainabilityScore;
     }
 }

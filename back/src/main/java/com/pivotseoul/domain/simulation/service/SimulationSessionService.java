@@ -2,11 +2,13 @@ package com.pivotseoul.domain.simulation.service;
 
 import com.pivotseoul.domain.simulation.dto.CreateSessionRequest;
 import com.pivotseoul.domain.simulation.dto.CreateSessionResponse;
+import com.pivotseoul.domain.simulation.entity.Scenario;
 import com.pivotseoul.domain.simulation.entity.SimulationSession;
 import com.pivotseoul.domain.simulation.entity.UserCondition;
+import com.pivotseoul.domain.simulation.repository.ScenarioRepository;
 import com.pivotseoul.domain.simulation.repository.SimulationSessionRepository;
-import com.pivotseoul.domain.user.entity.LifeStage;
-import com.pivotseoul.domain.user.repository.LifeStageRepository;
+import com.pivotseoul.domain.simulation.entity.LifeStage;
+import com.pivotseoul.domain.simulation.repository.LifeStageRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,37 +20,38 @@ public class SimulationSessionService {
 
     private final LifeStageRepository lifeStageRepository;
     private final SimulationSessionRepository simulationSessionRepository;
+    private final ScenarioRepository scenarioRepository;
 
     public SimulationSessionService(
             LifeStageRepository lifeStageRepository,
-            SimulationSessionRepository simulationSessionRepository
+            SimulationSessionRepository simulationSessionRepository,
+            ScenarioRepository scenarioRepository
     ) {
         this.lifeStageRepository = lifeStageRepository;
         this.simulationSessionRepository = simulationSessionRepository;
+        this.scenarioRepository = scenarioRepository;
     }
 
     @Transactional
     public CreateSessionResponse createSession(CreateSessionRequest request) {
-        // 1. LifeStageCode를 기반으로 LifeStage 엔티티 조회
-        LifeStage lifeStage = lifeStageRepository.findByStageCode(request.lifeStageCode())
+        String stageCode = normalizeLifeStageCode(request.lifeStageCode());
+        LifeStage lifeStage = lifeStageRepository.findByStageCode(stageCode)
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 생애단계 코드입니다: " + request.lifeStageCode()));
 
-        // 2. SimulationSession 생성 (session_uuid 발급)
         String sessionUuid = UUID.randomUUID().toString();
         SimulationSession session = SimulationSession.create(
                 sessionUuid,
                 lifeStage,
                 null,
-                "CREATED",
+                "READY",
                 false,
                 Instant.now()
         );
 
-        // 3. UserCondition 생성 및 연관관계 매핑
         UserCondition userCondition = new UserCondition(
                 session,
                 request.currentDistrict(),
-                request.compareDistrict(),
+                null,
                 request.monthlyIncome(),
                 request.monthlyHousing(),
                 request.monthlyLiving(),
@@ -58,13 +61,28 @@ public class SimulationSessionService {
                 request.retirementAge(),
                 request.savings()
         );
-
         session.setUserCondition(userCondition);
 
-        // 4. DB 저장 (SimulationSession에 Cascade=ALL이 걸려있으므로 UserCondition도 함께 저장됨)
-        simulationSessionRepository.save(session);
+        SimulationSession saved = simulationSessionRepository.save(session);
 
-        // 5. 프론트엔드가 기대하는 sessionId 필드에 UUID 값을 담아 반환
-        return new CreateSessionResponse(sessionUuid);
+        scenarioRepository.save(Scenario.createMvp(saved.getSessionId()));
+
+        return new CreateSessionResponse(
+                saved.getSessionId(),
+                saved.getSessionUuid(),
+                saved.getSessionStatus()
+        );
+    }
+
+    private String normalizeLifeStageCode(String code) {
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException("lifeStageCode는 필수입니다.");
+        }
+        return switch (code.trim().toLowerCase()) {
+            case "youth" -> "YOUTH";
+            case "family" -> "FAMILY";
+            case "senior" -> "SENIOR";
+            default -> code.trim().toUpperCase();
+        };
     }
 }

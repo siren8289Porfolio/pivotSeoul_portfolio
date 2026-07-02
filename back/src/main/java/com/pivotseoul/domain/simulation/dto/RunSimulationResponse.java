@@ -6,8 +6,10 @@ import java.util.List;
 public class RunSimulationResponse {
 
     private String sessionId;
+    private Long scenarioResultId;
     private String runStatus;
     private String resultStatus;
+    private Double rir;
     private Integer riskScore;
     private Double confidenceScore;
     private List<ThresholdResultItem> thresholdResults;
@@ -18,15 +20,19 @@ public class RunSimulationResponse {
 
     public RunSimulationResponse(
             String sessionId,
+            Long scenarioResultId,
             String runStatus,
             String resultStatus,
+            Double rir,
             Integer riskScore,
             Double confidenceScore,
             List<ThresholdResultItem> thresholdResults,
             JsonNode aiResult) {
         this.sessionId = sessionId;
+        this.scenarioResultId = scenarioResultId;
         this.runStatus = runStatus;
         this.resultStatus = resultStatus;
+        this.rir = rir;
         this.riskScore = riskScore;
         this.confidenceScore = confidenceScore;
         this.thresholdResults = thresholdResults;
@@ -37,12 +43,20 @@ public class RunSimulationResponse {
         return sessionId;
     }
 
+    public Long getScenarioResultId() {
+        return scenarioResultId;
+    }
+
     public String getRunStatus() {
         return runStatus;
     }
 
     public String getResultStatus() {
         return resultStatus;
+    }
+
+    public Double getRir() {
+        return rir;
     }
 
     public Integer getRiskScore() {

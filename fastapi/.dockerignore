@@ -6,7 +6,6 @@ __pycache__
 .venv
 venv
 *.egg-info
-lifePivot_/data
 .env
 *.env.local
 .DS_Store

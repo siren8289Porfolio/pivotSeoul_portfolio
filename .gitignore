@@ -39,9 +39,9 @@ venv/
 back/bin/
 
 # Local AI/FastAPI datasets. Keep manifests/docs in source, not raw bulk data.
-fastapi/lifePivot_/data/*
-!fastapi/lifePivot_/data/.gitkeep
-!fastapi/lifePivot_/data/README.md
+# FastAPI local data (if added later)
+fastapi/data/*
+!fastapi/data/.gitkeep
 
 # Figma/imported image drops should be stored externally unless actively referenced.
 front/src/imports/

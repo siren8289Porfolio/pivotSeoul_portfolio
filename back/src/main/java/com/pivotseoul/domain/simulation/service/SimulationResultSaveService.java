@@ -29,7 +29,7 @@ public class SimulationResultSaveService {
         this.thresholdTypeRepository = thresholdTypeRepository;
     }
 
-    public void saveHousingResult(
+    public Long saveHousingResult(
             Long simulationRunId,
             Long scenarioId,
             JsonNode aiResult) {
@@ -64,6 +64,8 @@ public class SimulationResultSaveService {
         thresholdResult.setCalculationSummary(buildCalculationSummary(rir, resultStatus, isRedZone));
 
         thresholdResultRepository.save(thresholdResult);
+
+        return savedScenarioResult.getScenarioResultId();
     }
 
     private String buildCalculationSummary(BigDecimal rir, String resultStatus, boolean isRedZone) {

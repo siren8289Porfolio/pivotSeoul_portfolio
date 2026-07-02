@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router';
 import {
-  LayoutDashboard, Users, GitCompare, BarChart3,
-  Bell, Search, Sun, Moon, MapPin, ChevronRight, Settings, Shield
+  LayoutDashboard, Users, BarChart3,
+  Bell, Search, Sun, Moon, MapPin, ChevronRight, Play
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { usePivot } from '../context/PivotContext';
@@ -10,9 +10,8 @@ import { useIsMobile } from './ui-use-mobile';
 const navItems = [
   { icon: LayoutDashboard, label: '홈', path: '/', mobileLabel: '홈' },
   { icon: Users, label: '내 조건', path: '/stage', mobileLabel: '조건' },
-  { icon: GitCompare, label: 'A/B 시나리오', path: '/scenario', mobileLabel: 'A/B' },
-  { icon: BarChart3, label: '결과 분석', path: '/results', mobileLabel: '결과' },
-  { icon: Settings, label: '설정', path: '/settings', mobileLabel: '설정' },
+  { icon: Play, label: '실행', path: '/simulation-run', mobileLabel: '실행' },
+  { icon: BarChart3, label: '결과', path: '/results', mobileLabel: '결과' },
 ];
 
 const lifeStageLabel: Record<string, string> = {
@@ -25,6 +24,7 @@ const lifeStageLabel: Record<string, string> = {
 function isNavActive(pathname: string, navPath: string) {
   if (navPath === '/') return pathname === '/';
   if (navPath === '/stage') return pathname === '/stage' || pathname.startsWith('/onboarding');
+  if (navPath === '/simulation-run') return pathname === '/simulation-run';
   return pathname === navPath;
 }
 
@@ -40,8 +40,8 @@ export function Layout() {
     if (p === '/') return '홈 대시보드';
     if (p === '/stage') return '생애 단계 선택';
     if (p.startsWith('/onboarding')) return '내 조건 입력';
-    if (p === '/scenario') return 'A/B 시나리오';
-    if (p === '/results') return '결과 분석';
+    if (p === '/simulation-run') return 'RIR 시뮬레이션';
+    if (p === '/results') return '결과';
     return '피벗서울';
   };
 
@@ -189,20 +189,11 @@ export function Layout() {
                 <Bell size={15} />
                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full" style={{ background: c.warning }} />
               </button>
-              <button
-                onClick={() => navigate('/admin/login')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all"
-                style={{ background: c.primaryBg, color: c.textSec, border: `1px solid ${c.border}`, fontSize: '0.78rem' }}
-                title="관리자 콘솔"
-              >
-                <Shield size={13} style={{ color: c.primary }} />
-                <span className="hidden lg:inline">관리자</span>
-              </button>
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center cursor-pointer"
                 style={{ background: 'linear-gradient(135deg, #6366F1, #818CF8)', color: 'white', fontSize: '0.8rem', fontWeight: 600 }}
               >
-                {profile.name?.charAt(0) ?? '김'}
+                {profile.lifeStage ? lifeStageLabel[profile.lifeStage].charAt(0) : '서'}
               </div>
             </div>
           </header>

@@ -1,68 +1,25 @@
-import { createBrowserRouter, Navigate } from 'react-router';
+import { createBrowserRouter } from 'react-router';
 import { Layout } from './components/Layout';
-import { AdminLayout } from './components/AdminLayout';
 
-// User pages
 import { Home } from './pages/Home';
 import { StageSelection } from './pages/StageSelection';
-import { OnboardingYouth } from './pages/OnboardingYouth';
-import { OnboardingFamily } from './pages/OnboardingFamily';
-import { OnboardingSenior } from './pages/OnboardingSenior';
-import { Scenario } from './pages/Scenario';
-import { Results } from './pages/Results';
+import { Onboarding } from './pages/Onboarding';
 import { SimulationRun } from './pages/SimulationRun';
-
-// Admin pages
-import { AdminLogin } from './pages/admin-AdminLogin';
-import { AdminDashboard } from './pages/admin-AdminDashboard';
-import { AdminMonitoring } from './pages/admin-AdminMonitoring';
-import { AdminDatasets } from './pages/admin-AdminDatasets';
-import { AdminNotices } from './pages/admin-AdminNotices';
-import { AdminLogs } from './pages/admin-AdminLogs';
-import { AdminAccounts } from './pages/admin-AdminAccounts';
+import { Results } from './pages/Results';
 
 /**
- * Routing policy:
- * - User journey is fixed: Home -> Stage -> Onboarding -> Scenario -> Results
- * - Admin journey is split: login route and authenticated admin layout route
- * - Redirect routes intentionally block invalid direct access paths
+ * MVP 사용자 플로우: Home → Stage → Onboarding → SimulationRun → Results
  */
 export const router = createBrowserRouter([
-  // ── User layout ──
   {
     path: '/',
     Component: Layout,
     children: [
       { index: true, Component: Home },
       { path: 'stage', Component: StageSelection },
-      { path: 'onboarding', element: <Navigate to="/stage" replace /> },
-      { path: 'onboarding/youth', Component: OnboardingYouth },
-      { path: 'onboarding/family', Component: OnboardingFamily },
-      { path: 'onboarding/senior', Component: OnboardingSenior },
-      { path: 'scenario', Component: Scenario },
+      { path: 'onboarding', Component: Onboarding },
       { path: 'simulation-run', Component: SimulationRun },
       { path: 'results', Component: Results },
-    ],
-  },
-
-  // ── Admin login (standalone, no layout) ──
-  {
-    path: '/admin/login',
-    Component: AdminLogin,
-  },
-
-  // ── Admin layout (requires auth) ──
-  {
-    path: '/admin',
-    Component: AdminLayout,
-    children: [
-      { index: true, Component: AdminDashboard },
-      { path: 'monitoring', Component: AdminMonitoring },
-      { path: 'datasets', Component: AdminDatasets },
-      { path: 'content', element: <Navigate to="/admin" replace /> },
-      { path: 'notices', Component: AdminNotices },
-      { path: 'logs', Component: AdminLogs },
-      { path: 'accounts', Component: AdminAccounts },
     ],
   },
 ]);

@@ -1,15 +1,10 @@
 package com.pivotseoul.domain.simulation.service;
 
-import com.pivotseoul.domain.simulation.dto.EvidenceResponse;
 import com.pivotseoul.domain.simulation.dto.ResultSummaryResponse;
+import com.pivotseoul.domain.simulation.dto.ScenarioResultBundle;
 import com.pivotseoul.domain.simulation.dto.SimulationResultResponse;
 import com.pivotseoul.domain.simulation.dto.ThresholdResultResponse;
-import com.pivotseoul.domain.simulation.entity.ScenarioResult;
-import com.pivotseoul.domain.simulation.entity.SimulationDataUsage;
-import com.pivotseoul.domain.simulation.entity.ThresholdResult;
-import com.pivotseoul.domain.simulation.repository.ScenarioResultRepository;
-import com.pivotseoul.domain.simulation.repository.SimulationDataUsageRepository;
-import com.pivotseoul.domain.simulation.repository.ThresholdResultRepository;
+import com.pivotseoul.domain.simulation.repository.ScenarioResultQueryRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -30,132 +25,70 @@ public class SimulationResultService {
     private static final BigDecimal WARNING_RISK_SCORE = new BigDecimal("40");
     private static final BigDecimal DANGER_RISK_SCORE = new BigDecimal("70");
 
-    private final ScenarioResultRepository scenarioResultRepository;
-    private final ThresholdResultRepository thresholdResultRepository;
-    private final SimulationDataUsageRepository simulationDataUsageRepository;
+    private final ScenarioResultQueryRepository scenarioResultQueryRepository;
 
-    public SimulationResultService(
-            ScenarioResultRepository scenarioResultRepository,
-            ThresholdResultRepository thresholdResultRepository,
-            SimulationDataUsageRepository simulationDataUsageRepository
-    ) {
-        this.scenarioResultRepository = scenarioResultRepository;
-        this.thresholdResultRepository = thresholdResultRepository;
-        this.simulationDataUsageRepository = simulationDataUsageRepository;
+    public SimulationResultService(ScenarioResultQueryRepository scenarioResultQueryRepository) {
+        this.scenarioResultQueryRepository = scenarioResultQueryRepository;
     }
 
     public SimulationResultResponse getResult(Long scenarioResultId) {
-        return scenarioResultRepository.findById(scenarioResultId)
+        return scenarioResultQueryRepository.findBundleById(scenarioResultId)
                 .map(this::toResultResponse)
                 .orElseGet(() -> placeholderResult(scenarioResultId));
     }
 
     public ResultSummaryResponse getSummary(Long scenarioResultId) {
-        return scenarioResultRepository.findById(scenarioResultId)
+        return scenarioResultQueryRepository.findBundleById(scenarioResultId)
                 .map(this::toSummaryResponse)
                 .orElseGet(() -> placeholderSummary(scenarioResultId));
     }
 
     public List<ResultSummaryResponse> getHistory(Long simulationRunId) {
         if (simulationRunId == null) {
-            return scenarioResultRepository.findAll().stream()
-                    .map(this::toSummaryResponse)
-                    .toList();
+            return List.of();
         }
-        return scenarioResultRepository.findBySimulationRunIdOrderByScenarioResultIdDesc(simulationRunId)
+        return scenarioResultQueryRepository.findBundlesByRunId(simulationRunId)
                 .stream()
                 .map(this::toSummaryResponse)
                 .toList();
     }
 
-    private SimulationResultResponse toResultResponse(ScenarioResult result) {
-        List<ThresholdResultResponse> thresholds = thresholdResultRepository
-                .findByScenarioResultIdOrderByThresholdResultIdAsc(result.getScenarioResultId())
-                .stream()
-                .map(this::toThresholdResponse)
-                .toList();
-        List<EvidenceResponse> dataSources = simulationDataUsageRepository
-                .findBySimulationRunIdOrderByUsageIdAsc(result.getSimulationRunId())
-                .stream()
-                .map(this::toEvidenceResponse)
-                .toList();
-        ResultSummaryResponse summary = toSummaryResponse(result, thresholds);
-
+    private SimulationResultResponse toResultResponse(ScenarioResultBundle bundle) {
+        ResultSummaryResponse summary = toSummaryResponse(bundle);
         return new SimulationResultResponse(
-                result.getScenarioResultId(),
-                result.getSimulationRunId(),
-                result.getScenarioId(),
-                result.getResultStatus(),
+                bundle.scenarioResultId(),
+                bundle.simulationRunId(),
+                bundle.scenarioId(),
+                bundle.resultStatus(),
                 summary.riskStatus(),
                 summary,
-                buildScoreMap(result),
-                thresholds,
-                dataSources
+                buildScoreMap(bundle),
+                bundle.thresholds(),
+                List.of()
         );
     }
 
-    private ResultSummaryResponse toSummaryResponse(ScenarioResult result) {
-        List<ThresholdResultResponse> thresholds = thresholdResultRepository
-                .findByScenarioResultIdOrderByThresholdResultIdAsc(result.getScenarioResultId())
-                .stream()
-                .map(this::toThresholdResponse)
-                .toList();
-        return toSummaryResponse(result, thresholds);
-    }
-
-    private ResultSummaryResponse toSummaryResponse(
-            ScenarioResult result,
-            List<ThresholdResultResponse> thresholds
-    ) {
-        long redZoneCount = thresholds.stream().filter(ThresholdResultResponse::redZone).count();
-        String riskStatus = resolveRiskStatus(result.getRiskScore(), redZoneCount);
+    private ResultSummaryResponse toSummaryResponse(ScenarioResultBundle bundle) {
+        long redZoneCount = bundle.thresholds().stream().filter(ThresholdResultResponse::redZone).count();
+        String riskStatus = resolveRiskStatus(bundle.riskScore(), redZoneCount);
         return new ResultSummaryResponse(
-                result.getScenarioResultId(),
-                result.getSimulationRunId(),
-                result.getScenarioId(),
-                result.getResultStatus(),
+                bundle.scenarioResultId(),
+                bundle.simulationRunId(),
+                bundle.scenarioId(),
+                bundle.resultStatus(),
                 riskStatus,
-                result.getTotalScore(),
-                result.getRiskScore(),
-                result.getConfidenceScore(),
+                bundle.totalScore(),
+                bundle.riskScore(),
+                bundle.confidenceScore(),
                 redZoneCount,
                 resolveSummaryMessage(riskStatus)
         );
     }
 
-    private Map<String, BigDecimal> buildScoreMap(ScenarioResult result) {
+    private Map<String, BigDecimal> buildScoreMap(ScenarioResultBundle bundle) {
         Map<String, BigDecimal> scores = new LinkedHashMap<>();
-        scores.put("housing", result.getHousingScore());
-        scores.put("disposableIncome", result.getDisposableIncomeScore());
-        scores.put("career", result.getCareerScore());
-        scores.put("timeLoss", result.getTimeLossScore());
-        scores.put("opportunity", result.getOpportunityIndex());
-        scores.put("childcare", result.getChildcareScore());
-        scores.put("policy", result.getPolicyScore());
-        scores.put("seniorSustainability", result.getSeniorSustainabilityScore());
+        scores.put("housing", bundle.housingScore());
         return scores;
-    }
-
-    private ThresholdResultResponse toThresholdResponse(ThresholdResult threshold) {
-        return new ThresholdResultResponse(
-                threshold.getThresholdResultId(),
-                threshold.getThresholdTypeId(),
-                threshold.getThresholdStatus(),
-                threshold.getCalculatedValue(),
-                threshold.getThresholdValue(),
-                threshold.isRedZone(),
-                threshold.getCalculationSummary()
-        );
-    }
-
-    private EvidenceResponse toEvidenceResponse(SimulationDataUsage usage) {
-        return new EvidenceResponse(
-                usage.getUsageId(),
-                usage.getDataSnapshotId(),
-                usage.getUsedFor(),
-                usage.getUsedFieldList(),
-                usage.getSourceWeight()
-        );
     }
 
     private String resolveRiskStatus(BigDecimal riskScore, long redZoneCount) {

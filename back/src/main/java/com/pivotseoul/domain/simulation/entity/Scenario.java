@@ -37,6 +37,15 @@ public class Scenario {
     protected Scenario() {
     }
 
+    public static Scenario createMvp(Long sessionId) {
+        Scenario scenario = new Scenario();
+        scenario.setSessionId(sessionId);
+        scenario.setScenarioType("A");
+        scenario.setScenarioTitle("MVP 단일 시나리오");
+        scenario.setDisplayOrder(1);
+        return scenario;
+    }
+
     public Long getScenarioId() {
         return scenarioId;
     }

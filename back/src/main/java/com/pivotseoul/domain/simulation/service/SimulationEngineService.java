@@ -2,15 +2,18 @@ package com.pivotseoul.domain.simulation.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pivotseoul.domain.ai.service.AiGatewayService;
+import com.pivotseoul.global.observability.PipelineRunLogService;
 import com.pivotseoul.domain.simulation.dto.RunSimulationRequest;
 import com.pivotseoul.domain.simulation.dto.RunSimulationResponse;
 import com.pivotseoul.domain.simulation.entity.Scenario;
 import com.pivotseoul.domain.simulation.entity.SimulationRun;
+import com.pivotseoul.domain.simulation.entity.SimulationSession;
 import com.pivotseoul.domain.simulation.repository.ScenarioRepository;
 import com.pivotseoul.domain.simulation.repository.SimulationRunRepository;
+import com.pivotseoul.domain.simulation.repository.SimulationSessionRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -24,29 +27,58 @@ public class SimulationEngineService {
     private final AiGatewayService aiGatewayService;
     private final ObjectMapper objectMapper;
     private final SimulationRunRepository simulationRunRepository;
+    private final SimulationSessionRepository simulationSessionRepository;
     private final CalculationLogService calculationLogService;
     private final SimulationResultSaveService simulationResultSaveService;
     private final ScenarioRepository scenarioRepository;
+    private final PipelineRunLogService pipelineRunLogService;
 
     public SimulationEngineService(
             AiGatewayService aiGatewayService,
             ObjectMapper objectMapper,
             SimulationRunRepository simulationRunRepository,
+            SimulationSessionRepository simulationSessionRepository,
             CalculationLogService calculationLogService,
             SimulationResultSaveService simulationResultSaveService,
-            ScenarioRepository scenarioRepository) {
+            ScenarioRepository scenarioRepository,
+            PipelineRunLogService pipelineRunLogService) {
         this.aiGatewayService = aiGatewayService;
         this.objectMapper = objectMapper;
         this.simulationRunRepository = simulationRunRepository;
+        this.simulationSessionRepository = simulationSessionRepository;
         this.calculationLogService = calculationLogService;
         this.simulationResultSaveService = simulationResultSaveService;
         this.scenarioRepository = scenarioRepository;
+        this.pipelineRunLogService = pipelineRunLogService;
     }
 
+    @Transactional
     public ResponseEntity<RunSimulationResponse> runSimulation(
             String sessionId,
             RunSimulationRequest request) {
-        Long numericSessionId = parseSessionId(sessionId);
+        long pipelineLogId = pipelineRunLogService.start("simulation_run");
+        long startedAt = System.currentTimeMillis();
+
+        try {
+            return executeRun(sessionId, request, pipelineLogId, startedAt);
+        } catch (RuntimeException ex) {
+            pipelineRunLogService.fail(
+                    pipelineLogId,
+                    ex.getMessage(),
+                    System.currentTimeMillis() - startedAt
+            );
+            throw ex;
+        }
+    }
+
+    private ResponseEntity<RunSimulationResponse> executeRun(
+            String sessionId,
+            RunSimulationRequest request,
+            long pipelineLogId,
+            long startedAt
+    ) {
+        Long numericSessionId = resolveSessionId(sessionId);
+        assertSessionExists(numericSessionId);
 
         SimulationRun simulationRun = createRunningSimulationRun(numericSessionId);
         JsonNode aiRequestBody = objectMapper.valueToTree(request);
@@ -69,13 +101,21 @@ public class SimulationEngineService {
                     extractText(aiResult, "detail", "FastAPI request failed"));
 
             RunSimulationResponse failedResponse = new RunSimulationResponse(
-                    sessionId,
+                    String.valueOf(numericSessionId),
+                    null,
                     "FAILED",
                     "UNKNOWN",
+                    null,
                     0,
                     0.0,
                     List.of(),
                     aiResult);
+
+            pipelineRunLogService.fail(
+                    pipelineLogId,
+                    extractText(aiResult, "error", "FASTAPI_ERROR"),
+                    System.currentTimeMillis() - startedAt
+            );
 
             return ResponseEntity.status(aiResponse.getStatusCode()).body(failedResponse);
         }
@@ -98,7 +138,7 @@ public class SimulationEngineService {
 
         Long scenarioId = resolveScenarioId(numericSessionId);
 
-        simulationResultSaveService.saveHousingResult(
+        Long scenarioResultId = simulationResultSaveService.saveHousingResult(
                 simulationRun.getSimulationRunId(),
                 scenarioId,
                 aiResult);
@@ -111,24 +151,53 @@ public class SimulationEngineService {
                 isRedZone);
 
         RunSimulationResponse response = new RunSimulationResponse(
-                sessionId,
+                String.valueOf(numericSessionId),
+                scenarioResultId,
                 "COMPLETED",
                 resultStatus,
+                rir,
                 riskScore,
                 confidenceScore,
                 List.of(housingThreshold),
                 aiResult);
 
-        return ResponseEntity.status(aiResponse.getStatusCode()).body(response);
+        pipelineRunLogService.complete(
+                pipelineLogId,
+                1,
+                System.currentTimeMillis() - startedAt,
+                simulationRun.getCompletedAt()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    private void assertSessionExists(Long sessionId) {
+        if (!simulationSessionRepository.existsById(sessionId)) {
+            throw new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId);
+        }
+    }
+
+    private Long resolveSessionId(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new IllegalArgumentException("sessionId는 필수입니다.");
+        }
+
+        try {
+            return Long.parseLong(sessionId.trim());
+        } catch (NumberFormatException ignored) {
+            SimulationSession session = simulationSessionRepository.findBySessionUuid(sessionId.trim())
+                    .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+            return session.getSessionId();
+        }
     }
 
     private SimulationRun createRunningSimulationRun(Long sessionId) {
         SimulationRun simulationRun = new SimulationRun();
         simulationRun.setSessionId(sessionId);
         simulationRun.setRunStatus("RUNNING");
-        simulationRun.setCalculationEngineVersion("SPRING_ENGINE_V1");
+        simulationRun.setCalculationEngineVersion("MVP_V1");
         simulationRun.setAiPipelineVersion("FASTAPI_HOUSING_V1");
-        simulationRun.setModelVersion("RULE_BASED_V1");
+        simulationRun.setModelVersion("RIR_RULE_V1");
         simulationRun.setStartedAt(Instant.now());
 
         return simulationRunRepository.save(simulationRun);
@@ -141,14 +210,6 @@ public class SimulationEngineService {
                         "Scenario is not initialized for sessionId=" + sessionId));
 
         return scenario.getScenarioId();
-    }
-
-    private Long parseSessionId(String sessionId) {
-        try {
-            return Long.parseLong(sessionId);
-        } catch (NumberFormatException e) {
-            return 0L;
-        }
     }
 
     private String extractText(JsonNode node, String fieldName, String defaultValue) {
