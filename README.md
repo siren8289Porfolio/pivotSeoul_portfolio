@@ -97,7 +97,6 @@ scenario_result + threshold_result
 
 신규 회귀 테스트도 추가해 결과 조회가 다시 N+1 구조로 돌아가지 않도록 검증했습니다.
 
-문서용으로는 이렇게 쓰면 됩니다.
 
 > F-003 결과 조회는 기존 JPA lazy loading 구조라면 `scenario_result` 1회 조회 후 임계값 개수만큼 `threshold_result` 추가 조회가 발생할 수 있었습니다. 이를 `ScenarioResultQueryRepository`의 JOIN 조회로 고정해, 임계값 3건 기준 SQL 4개를 1개로 줄였고, 임계값 5건 기준 SQL 6개를 1개로 줄였습니다. 신규 회귀 테스트를 추가해 결과 조회가 다시 N+1 구조로 돌아가지 않도록 쿼리 수를 검증했습니다.
 
@@ -414,7 +413,6 @@ pivotSeoul의 Spark 배치는 fact refresh 과정에서 cache와 shuffle partiti
 
 첨부 정리에서는 `scenario_result`의 비-MVP score 컬럼 8개 제거, 미사용 테이블 11개 제거, B-tree/Partial Index/BRIN/Materialized View 적용을 핵심 DB 효율화로 정리했습니다.
 
-README에는 이렇게 쓰는 게 안전합니다.
 
 > pivotSeoul은 MVP에서 실제로 사용하는 주거비 부담 시뮬레이션 흐름에 맞춰 DB 스키마를 축소했습니다. `scenario_result`의 비-MVP score 컬럼 8개를 제거하고, 미사용 테이블 11개를 제거해 운영 테이블을 MVP 핵심 흐름 중심으로 단순화했습니다. 또한 session UUID, READY 세션, red_zone 임계값, 시계열 로그 등 실제 조회 패턴에 맞춰 B-tree, Partial Index, BRIN, Materialized View를 적용했습니다.
 
